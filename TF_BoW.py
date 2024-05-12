@@ -1,12 +1,11 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import cross_val_score
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.pipeline import make_pipeline
-from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import StandardScaler
 
 # Veri setini yükle
@@ -28,16 +27,13 @@ y = combined_df['label']
 vectorizers = {
     'TF-IDF': TfidfVectorizer(max_features=5000),
     'Count Vectorizer': CountVectorizer(max_features=5000),
-    'TF-IDF + SVD50': make_pipeline(TfidfVectorizer(max_features=5000), TruncatedSVD(n_components=50)),
-    'Count Vectorizer + SVD50': make_pipeline(CountVectorizer(max_features=5000), TruncatedSVD(n_components=50)),
-    'TF-IDF + SVD100': make_pipeline(TfidfVectorizer(max_features=5000), TruncatedSVD(n_components=100))
 }
 
 # Sınıflandırıcılar
 classifiers = {
-    "Logistic Regression": LogisticRegression(random_state=42),
+    "Logistic Regression": LogisticRegression(max_iter=5000, random_state=42),
     "Random Forest": RandomForestClassifier(random_state=42),
-    "Multinomial Naive Bayes": MultinomialNB(),
+    "Multinomial Naive Bayes": GaussianNB(),
     "SVM": SVC(random_state=42),
     "SVM with Scaling": make_pipeline(StandardScaler(with_mean=False), SVC(random_state=42))
 }
@@ -48,11 +44,12 @@ for v_name, vectorizer in vectorizers.items():
     X_transformed = vectorizer.fit_transform(X)
     results = {}
     for c_name, classifier in classifiers.items():
-        scores = cross_val_score(classifier, X_transformed, y, cv=5)
-        results[c_name] = scores.mean()  # Ortalama doğruluk skorunu al
+        X_transformed_dense = X_transformed.toarray()
+        scores = cross_val_score(classifier, X_transformed_dense, y, cv=5)
+        results[c_name] = scores.mean()
     all_results[v_name] = results
 
-# Sonuçları yazdır
+# Sonuçları konsola yazdır
 for vect_name, scores in all_results.items():
     print(f"---{vect_name}---")
     for clf_name, score in scores.items():
